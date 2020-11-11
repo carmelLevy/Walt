@@ -22,9 +22,8 @@ public class WaltServiceImpl implements WaltService {
     @Override
     public Delivery createOrderAndAssignDriver(Customer customer, Restaurant restaurant,
                                                Date deliveryTime) {
-        //TODO - check if resturant and customer are in the same city
         List<Driver> availableDrivers = searchForAvailableDrivers(restaurant, deliveryTime);
-        if(availableDrivers.isEmpty()){
+        if (availableDrivers.isEmpty()) {
             throw new RuntimeException(String.format("There isn't an available driver"));
         }
         Driver driver = getMostLessBusyDriver(availableDrivers);
@@ -32,8 +31,6 @@ public class WaltServiceImpl implements WaltService {
         deliveryRepository.save(delivery);
         return delivery;
     }
-
-    //TODO - add tests
 
     private List<Driver> searchForAvailableDrivers(Restaurant restaurant, Date deliveryTime) {
         List<Driver> availableDrivers = new ArrayList<>();
@@ -52,7 +49,7 @@ public class WaltServiceImpl implements WaltService {
     }
 
     private Driver getMostLessBusyDriver(List<Driver> availableDrivers) {
-        Collections.sort(availableDrivers,(d1,d2)->
+        Collections.sort(availableDrivers, (d1, d2) ->
                 Double.compare(getDriverTotalKM(d1), getDriverTotalKM(d2)));
         return availableDrivers.get(0);
     }
@@ -67,8 +64,7 @@ public class WaltServiceImpl implements WaltService {
 
     @Override
     public List<DriverDistance> getDriverRankReport() {
-
-        return null;
+        return deliveryRepository.findTotalDistanceByDriver();
     }
 
     @Override

@@ -68,30 +68,34 @@ public class WaltTest {
 
         createDrivers(jerusalem, tlv, bash, haifa);
 
-        createCustomers(jerusalem, tlv, haifa);
+        createCustomers(jerusalem, tlv, haifa, bash);
 
-        createRestaurant(jerusalem, tlv);
+        createRestaurant(jerusalem, tlv, bash);
     }
 
-    private void createRestaurant(City jerusalem, City tlv) {
+    private void createRestaurant(City jerusalem, City tlv, City bash) {
         Restaurant meat = new Restaurant("meat", jerusalem, "All meat restaurant");
         Restaurant vegan = new Restaurant("vegan", tlv, "Only vegan");
         Restaurant cafe = new Restaurant("cafe", tlv, "Coffee shop");
         Restaurant chinese = new Restaurant("chinese", tlv, "chinese restaurant");
         Restaurant mexican = new Restaurant("restaurant", tlv, "mexican restaurant ");
+        Restaurant mozes = new Restaurant("mozes", bash, "hamburger restaurant ");
 
-        restaurantRepository.saveAll(Lists.newArrayList(meat, vegan, cafe, chinese, mexican));
+        restaurantRepository.saveAll(Lists.newArrayList(meat, vegan, cafe, chinese, mexican,
+                mozes));
     }
 
-    private void createCustomers(City jerusalem, City tlv, City haifa) {
+    private void createCustomers(City jerusalem, City tlv, City haifa, City bash) {
         Customer beethoven = new Customer("Beethoven", tlv, "Ludwig van Beethoven");
         Customer mozart = new Customer("Mozart", jerusalem, "Wolfgang Amadeus Mozart");
         Customer chopin = new Customer("Chopin", haifa, "Frédéric François Chopin");
         Customer rachmaninoff = new Customer("Rachmaninoff", tlv, "Sergei Rachmaninoff");
         Customer bach = new Customer("Bach", tlv, "Sebastian Bach. Johann");
+        Customer moshe = new Customer("Moshe", bash, "Moshe's address");
+        Customer itamar = new Customer("Itamar", bash, "itamar's address");
 
         customerRepository.saveAll(Lists.newArrayList(beethoven, mozart, chopin, rachmaninoff,
-                bach));
+                bach, moshe, itamar));
     }
 
     private void createDrivers(City jerusalem, City tlv, City bash, City haifa) {
@@ -176,8 +180,73 @@ public class WaltTest {
         assertNotEquals(delivery1.getDeliveryTime(), delivery2.getDeliveryTime());
     }
 
+
     @Test
     public void testBusiestDriver() {
+        Customer testCustomer1 = customerRepository.findByName("Moshe");
+        Customer testCustomer2 = customerRepository.findByName("Itamar");
 
+        Restaurant restaurant = restaurantRepository.findByName("mozes");
+        Date date = new Date();
+        date.setTime(date.getTime() + TimeUnit.HOURS.toMillis(10000));
+
+
+        Delivery delivery = waltService.createOrderAndAssignDriver(testCustomer1, restaurant,
+                date);
+
+        Driver driver1 = driverRepository.findByName("James");
+        Driver driver2 = driverRepository.findByName("John");
+
+        Long supposedSecDriverID;
+        supposedSecDriverID = delivery.getDriver().getId().equals(driver1.getId()) ?
+                driver2.getId() : driver1.getId();
+
+        Date date2 = new Date();
+
+        date2.setTime(date.getTime() + TimeUnit.HOURS.toMillis(1));
+        Delivery delivery2 = waltService.createOrderAndAssignDriver(testCustomer2, restaurant,
+                date2);
+        assertEquals(supposedSecDriverID, delivery2.getDriver().getId());
+
+        Date date3 = new Date();
+
+        date3.setTime(date.getTime() + TimeUnit.HOURS.toMillis(2));
+        Delivery delivery3 = waltService.createOrderAndAssignDriver(testCustomer2, restaurant,
+                date3);
+
+        supposedSecDriverID = delivery.getDistance() > delivery2.getDistance() ?
+                delivery2.getDriver().getId() : delivery.getDriver().getId();
+
+
+        assertEquals(supposedSecDriverID, delivery3.getDriver().getId());
+    }
+
+    @Test
+    public void testDriverRankReport() {
+        Driver driver1 = driverRepository.findByName("James");
+        Driver driver2 = driverRepository.findByName("John");
+
+        Customer testCustomer1 = customerRepository.findByName("Moshe");
+        Customer testCustomer2 = customerRepository.findByName("Itamar");
+
+        Restaurant restaurant = restaurantRepository.findByName("mozes");
+        Date date = new Date();
+        date.setTime(date.getTime() + TimeUnit.HOURS.toMillis(10000));
+
+
+        Delivery delivery1 = waltService.createOrderAndAssignDriver(testCustomer1, restaurant,
+                date);
+        Delivery delivery2 = waltService.createOrderAndAssignDriver(testCustomer2, restaurant,
+                date);
+
+        List<DriverDistance> driverDistances = waltService.getDriverRankReport();
+
+        System.out.println("\nDrivers rank based on their total distance report:");
+        System.out.println("--------------------------------------------------\n");
+
+        for (DriverDistance d : driverDistances) {
+            System.out.println("Driver Name: " + d.getDriver().getName() +
+                    ", Driver Distance: " + d.getTotalDistance());
+        }
     }
 }

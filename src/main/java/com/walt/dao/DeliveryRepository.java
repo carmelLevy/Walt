@@ -17,6 +17,9 @@ public interface DeliveryRepository extends CrudRepository<Delivery, Long> {
 
     List<Delivery> findDeliveriesByDriver(Driver driver);
 
+    @Query("SELECT d.driver AS driver, SUM(d.distance) AS totalDistance FROM Delivery d GROUP BY" +
+            " d.driver ORDER BY totalDistance DESC")
+    List<DriverDistance> findTotalDistanceByDriver();
 
 }
 
