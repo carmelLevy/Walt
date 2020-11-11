@@ -22,7 +22,7 @@ public interface DeliveryRepository extends CrudRepository<Delivery, Long> {
     List<DriverDistance> findAllDistancesByDriver();
 
     @Query("SELECT d.driver AS driver, SUM(d.distance) AS totalDistance FROM Delivery d WHERE " +
-            "d.driver.city =: chosenCity GROUP BY d.driver ORDER BY totalDistance DESC")
+            "d.driver.city =:chosenCity GROUP BY d.driver ORDER BY totalDistance DESC")
     List<DriverDistance> findAllCityDistancesByDriver(@Param("chosenCity") City city);
 }
 

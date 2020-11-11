@@ -12,15 +12,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 
 import javax.annotation.Resource;
-import java.time.LocalDateTime;
-import java.time.Month;
-import java.time.ZoneId;
+
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.*;
 
 @SpringBootTest()
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
@@ -88,6 +85,7 @@ public class WaltTest {
     private void createCustomers(City jerusalem, City tlv, City haifa, City bash) {
         Customer beethoven = new Customer("Beethoven", tlv, "Ludwig van Beethoven");
         Customer mozart = new Customer("Mozart", jerusalem, "Wolfgang Amadeus Mozart");
+        Customer richi = new Customer("Richi", jerusalem, "Richongo");
         Customer chopin = new Customer("Chopin", haifa, "Frédéric François Chopin");
         Customer rachmaninoff = new Customer("Rachmaninoff", tlv, "Sergei Rachmaninoff");
         Customer bach = new Customer("Bach", tlv, "Sebastian Bach. Johann");
@@ -95,7 +93,7 @@ public class WaltTest {
         Customer itamar = new Customer("Itamar", bash, "itamar's address");
 
         customerRepository.saveAll(Lists.newArrayList(beethoven, mozart, chopin, rachmaninoff,
-                bach, moshe, itamar));
+                bach, moshe, itamar,richi));
     }
 
     private void createDrivers(City jerusalem, City tlv, City bash, City haifa) {
@@ -117,7 +115,6 @@ public class WaltTest {
 
     @Test
     public void testBasics() {
-
         assertEquals(((List<City>) cityRepository.findAll()).size(), 4);
         assertEquals((driverRepository.findAllDriversByCity(cityRepository.findByName("Beer-Sheva"
         )).size()), 2);
@@ -125,7 +122,6 @@ public class WaltTest {
 
     @Test
     public void testAddOneOrder() {
-
         Customer testCustomer = customerRepository.findByName("Bach");
         Restaurant testRestaurant = restaurantRepository.findByName("cafe");
         Date date = new Date();
@@ -135,6 +131,25 @@ public class WaltTest {
         assertEquals(testDriver.getId(), delivery.getDriver().getId());
     }
 
+    @Test
+    public void testDriverCanBeAvailableAfterHour() {
+        Customer testCustomer1 = customerRepository.findByName("Mozart");
+        Customer testCustomer2 = customerRepository.findByName("Richi");
+        Restaurant testRestaurant = restaurantRepository.findByName("meat");
+        Date date = new Date();
+
+        Driver testDriver = driverRepository.findByName("Robert");
+
+        Delivery delivery = waltService.createOrderAndAssignDriver(testCustomer1, testRestaurant,
+                date);
+
+        Date date2 = new Date();
+        date2.setTime(date2.getTime() + TimeUnit.HOURS.toMillis(1));
+
+        Delivery delivery2 = waltService.createOrderAndAssignDriver(testCustomer2, testRestaurant,
+                date2);
+        assertEquals(testDriver.getId(), delivery.getDriver().getId());
+    }
 
     @Test
     public void testTwoOrdersSameRestaurant() {
@@ -217,23 +232,24 @@ public class WaltTest {
         supposedSecDriverID = delivery.getDistance() > delivery2.getDistance() ?
                 delivery2.getDriver().getId() : delivery.getDriver().getId();
 
-
         assertEquals(supposedSecDriverID, delivery3.getDriver().getId());
     }
 
     @Test
     public void testDriverRankReport() {
         Customer testCustomer1 = customerRepository.findByName("Moshe");
-        Customer testCustomer2 = customerRepository.findByName("Itamar");
+        Customer testCustomer2 = customerRepository.findByName("Mozart");
 
         Restaurant restaurant = restaurantRepository.findByName("mozes");
+        Restaurant restaurant2 = restaurantRepository.findByName("meat");
+
         Date date = new Date();
         date.setTime(date.getTime() + TimeUnit.HOURS.toMillis(10000));
 
 
         Delivery delivery1 = waltService.createOrderAndAssignDriver(testCustomer1, restaurant,
                 date);
-        Delivery delivery2 = waltService.createOrderAndAssignDriver(testCustomer2, restaurant,
+        Delivery delivery2 = waltService.createOrderAndAssignDriver(testCustomer2, restaurant2,
                 date);
 
         List<DriverDistance> driverDistances = waltService.getDriverRankReport();
@@ -249,6 +265,7 @@ public class WaltTest {
 
     @Test
     public void testDriverRankReportByCity() {
+
         Customer testCustomer1 = customerRepository.findByName("Moshe");
         Customer testCustomer2 = customerRepository.findByName("Itamar");
 
@@ -267,7 +284,8 @@ public class WaltTest {
         List<DriverDistance> driverDistancesByCity = waltService.getDriverRankReportByCity(city);
 
 
-        System.out.println("\nDrivers rank based on their total distance report by city "+city.getName()+
+        System.out.println("\nDrivers rank based on their total distance report by city " +
+                city.getName() +
                 ":");
         System.out.println(
                 "----------------------------------------------------------------------\n");
@@ -277,4 +295,80 @@ public class WaltTest {
                     ", Driver Distance: " + d.getTotalDistance());
         }
     }
+
+    @Test
+    public void testDifferentCityOfCustomerAndRestaurant() {
+        Customer testCustomer1 = customerRepository.findByName("Moshe"); //in bash
+
+        Restaurant restaurant = restaurantRepository.findByName("chinese"); //in tlv
+        Date date = new Date();
+
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            waltService.createOrderAndAssignDriver(testCustomer1, restaurant,
+                    date);
+        });
+
+        String expectedMessage = "ERROR : The customer and restaurant are in the different cities";
+        String actualMessage = exception.getMessage();
+
+        assertTrue(actualMessage.contains(expectedMessage));
+    }
+
+    @Test
+    public void testAvailableDriversIsEmpty() {
+        Customer testCustomer1 = customerRepository.findByName("Moshe");
+
+        Restaurant restaurant = restaurantRepository.findByName("mozes");
+        Date date = new Date();
+
+        Delivery delivery1 = waltService.createOrderAndAssignDriver(testCustomer1, restaurant,
+                date);
+        Delivery delivery2 = waltService.createOrderAndAssignDriver(testCustomer1, restaurant,
+                date);
+
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            waltService.createOrderAndAssignDriver(testCustomer1, restaurant,
+                    date);
+        });
+
+        String expectedMessage = "ERROR : There isn't an available driver";
+        String actualMessage = exception.getMessage();
+
+        assertTrue(actualMessage.contains(expectedMessage));
+    }
+
+    @Test
+    public void testInvalidInput() {
+        Customer testCustomer1 = customerRepository.findByName("Moshe");
+
+        Restaurant restaurant = restaurantRepository.findByName("mozes");
+        Date date = new Date();
+
+
+        // Test for null customer name
+        Exception exception1 = assertThrows(RuntimeException.class, () -> {
+            waltService.createOrderAndAssignDriver(null, restaurant,
+                    date);
+        });
+        String expectedMessage = "ERROR : An invalid input was provided to this method";
+        String actualMessage1 = exception1.getMessage();
+        assertTrue(actualMessage1.contains(expectedMessage));
+
+        // Test for null restaurant name
+        Exception exception2 = assertThrows(RuntimeException.class, () -> {
+            waltService.createOrderAndAssignDriver(testCustomer1, null,
+                    date);
+        });
+        String actualMessage2 = exception2.getMessage();
+        assertTrue(actualMessage2.contains(expectedMessage));
+
+        // Test for null delivery time
+        Exception exception3 = assertThrows(RuntimeException.class, () -> {
+            waltService.createOrderAndAssignDriver(testCustomer1, restaurant,
+                    null);
+        });
+        String actualMessage3 = exception3.getMessage();
+        assertTrue(actualMessage3.contains(expectedMessage));
+    }
+
 }
