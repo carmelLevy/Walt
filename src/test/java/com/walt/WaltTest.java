@@ -223,9 +223,6 @@ public class WaltTest {
 
     @Test
     public void testDriverRankReport() {
-        Driver driver1 = driverRepository.findByName("James");
-        Driver driver2 = driverRepository.findByName("John");
-
         Customer testCustomer1 = customerRepository.findByName("Moshe");
         Customer testCustomer2 = customerRepository.findByName("Itamar");
 
@@ -245,6 +242,37 @@ public class WaltTest {
         System.out.println("--------------------------------------------------\n");
 
         for (DriverDistance d : driverDistances) {
+            System.out.println("Driver Name: " + d.getDriver().getName() +
+                    ", Driver Distance: " + d.getTotalDistance());
+        }
+    }
+
+    @Test
+    public void testDriverRankReportByCity() {
+        Customer testCustomer1 = customerRepository.findByName("Moshe");
+        Customer testCustomer2 = customerRepository.findByName("Itamar");
+
+        Restaurant restaurant = restaurantRepository.findByName("mozes");
+        Date date = new Date();
+        date.setTime(date.getTime() + TimeUnit.HOURS.toMillis(10000));
+
+
+        Delivery delivery1 = waltService.createOrderAndAssignDriver(testCustomer1, restaurant,
+                date);
+        Delivery delivery2 = waltService.createOrderAndAssignDriver(testCustomer2, restaurant,
+                date);
+
+        City city = cityRepository.findByName("Beer-Sheva");
+
+        List<DriverDistance> driverDistancesByCity = waltService.getDriverRankReportByCity(city);
+
+
+        System.out.println("\nDrivers rank based on their total distance report by city "+city.getName()+
+                ":");
+        System.out.println(
+                "----------------------------------------------------------------------\n");
+
+        for (DriverDistance d : driverDistancesByCity) {
             System.out.println("Driver Name: " + d.getDriver().getName() +
                     ", Driver Distance: " + d.getTotalDistance());
         }
